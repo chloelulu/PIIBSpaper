@@ -1,8 +1,9 @@
-pkg <- c('ppcor','tibble','randomForest','circlize','ComplexHeatmap','pROC','tidyr','ggforce','Boruta','nlme',
-         'gridExtra','aod',
-         'dplyr','ggplot2','phyloseq','RColorBrewer','ggpubr','reshape','scales','made4','metagMisc','readr')
+pkg <- c('ppcor','tibble','randomForest','circlize','ComplexHeatmap',
+         'gridExtra','aod','pROC','tidyr','ggforce','Boruta','nlme',
+         'dplyr','ggplot2','phyloseq','RColorBrewer','ggpubr','reshape',
+         'scales','made4','metagMisc','readr')
 sapply(pkg, require, character = TRUE)
-setwd('/Users/m216453/Library/Mobile\ Documents/com~apple~CloudDocs/Documents/Mayo_project/Grover/FinalSubmit/')
+setwd('/Users/m216453/Library/Mobile\ Documents/com~apple~CloudDocs/Documents/Mayo_project/Grover/FinalSubmit/PIIBSpaper/')
 
 ## Loading data
 load('data/Data.wk.RData')
@@ -34,9 +35,9 @@ alpha$PA_c <- as.factor(alpha$PA_c)
 ## linear regression on Alpha diversity
 lm.obj <- lm(alpha$Shannon ~ alpha$BMI_c + alpha$PA_c)
 obs0 <- prmatrix(summary(lm.obj)$coefficients)
-lm.obj <- lm(alpha1$InvSimpson ~ alpha1$BMI_c + alpha1$PA_c)
+lm.obj <- lm(alpha$InvSimpson ~ alpha$BMI_c + alpha$PA_c)
 obs1 <- prmatrix(summary(lm.obj)$coefficients)
-lm.obj <- lm(alpha1$Observed ~ alpha1$BMI_c + alpha1$PA_c)
+lm.obj <- lm(alpha$Observed ~ alpha$BMI_c + alpha$PA_c)
 obs2 <- prmatrix(summary(lm.obj)$coefficients)
 
 # Violin plot of alpha diversity
@@ -83,13 +84,13 @@ ggviolin(alpha, x = 'PA_c', y = 'InvSimpson', fill = 'PA_c',bxp.errorbar = TRUE,
   scale_y_continuous(limits = c(5,30)) + 
   geom_bracket(xmin = 2, xmax = 3,size = 1,label.size = 7,
                y.position = c(29), label = paste0('*'))
-ggsave(path = 'result/','Fig1c_InvSimpson_jitter.pdf', width = 5, height =5, dpi = 100)
+ggsave(paste0('result/','Fig1c_InvSimpson_jitter.pdf'), width = 5, height =5, dpi = 100)
 
 ggviolin(alpha, x = 'PA_c', y = 'Observed', fill = 'PA_c',bxp.errorbar = TRUE,
          palette = c(brewer.pal(8,'Dark2')[5],'#f79646',brewer.pal(8,'Paired')[2]),
          add = "boxplot", add.params = list(fill = "white"))+ 
-  geom_boxplot(data = alpha1, aes(x = PA_c,y = Observed), width =0.2, color = 'black', outlier.shape = NA) +
-  geom_point(data = alpha1, aes(x = PA_c,y = Observed,fill = PA_c), 
+  geom_boxplot(data = alpha, aes(x = PA_c,y = Observed), width =0.2, color = 'black', outlier.shape = NA) +
+  geom_point(data = alpha, aes(x = PA_c,y = Observed,fill = PA_c), 
              position=position_jitterdodge(jitter.width =0.2), size =1, color = 'black') +
   
   theme_bw()+
@@ -294,7 +295,7 @@ dev.off()
 
 
 
-
+## Differential abundance analysis result
 fig1e <- read.csv('data/Fig1e.csv') %>% filter(Qvalue <= 0.1) %>% dplyr::rename(Species= X) 
 submet <- human_meta %>% rownames_to_column('SampleID')%>% filter(PA_c %in% c('High PA PI-IBS','Healthy volunteers')) %>% dplyr::select(c('SampleID','PA_c'))
 Species <- data.obj$abund.list$Species 
@@ -491,7 +492,7 @@ ggsave(path = 'result/', 'Fig1h.pdf', width =17, height =10, dpi = 100)
 
 
 # random forest prediction
-group = 'PA_c2'
+group = 'PA_c2'; level = 'Species'
 Sp = data.obj$abund.list[[level]]
 Sp = apply(Sp, 2, function(x) x/sum(x))
 Sp = as.data.frame(Sp)
@@ -554,6 +555,7 @@ labels.list <- probs.list <- list()
 labels.list[[level]] <- labels
 probs.list[[level]] <- probs
 roc = pROC::roc(labels,probs)
+sens.ci = ci.se(roc,specificities = roc$specificities * ifelse(roc$percent,100, 1))
 df <- cbind(roc$sensitivities*100,roc$specificities*100, sens.ci[,c(1,3)] *100) %>% as.data.frame()
 colnames(df) <- c('sensitivities','specificities','se.low','se.high')
 size = 20
@@ -1098,7 +1100,7 @@ for (level in levels[c(2:3,5)]) {
 
 
 ##======= KEGG heatmap ======= 
-load('data/healthy_high_KEGG.RData')
+tmp <- load('data/healthy_high_KEGG.RData')
 pdf(file = 'result/FigS6d.pdf', width = 8, height = 8)
 heatplot(high_healthy,method = "ward.D2",dend = "row",
          margins=c(5,21),keysize=0.5,key.par = list(cex=0.5),
@@ -1113,7 +1115,7 @@ max(level2[level2$adjust.p<= 0.1,'adjust.p'])
 # -------base =  PI-IBS(High PA), VS  Healthy volunters
 max <- max(level1$fc.level1)
 min <- min(level1$fc.level1)
-head(level1)
+graphics.off()
 ggplot(level1, aes(y=log10P, x=fc.level1,color = color, alpha = color)) +
   geom_point(size =3,pch = 17) +
   scale_color_manual(values=c("#999999", "#C32148"))+
